@@ -1,7 +1,7 @@
 import os
 import json
 import asyncio
-import anthropic
+import groq
 import pdfplumber
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
@@ -24,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-claude = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+groq_client = groq.Groq(api_key=os.environ["GROQ_API_KEY"])
 
 SYSTEM_PROMPT = """You are a helpful AI agent assisting users with their questions.
 When context from documents is provided, base your answer on that context.
@@ -142,14 +142,19 @@ async def _stream_response(user_message: str, source_chunks: list):
             yield f"data: {json.dumps(event)}\n\n"
             await asyncio.sleep(0)
 
-    # Stream Claude's answer token by token
-    with claude.messages.stream(
-        model="claude-haiku-4-5",
+    # Stream Groq's answer token by token
+    stream = groq_client.chat.completions.create(
+        model="llama-3.1-8b-instant",
         max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_message}],
-    ) as stream:
-        for token in stream.text_stream:
+        stream=True,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user",   "content": user_message},
+        ],
+    )
+    for chunk in stream:
+        token = chunk.choices[0].delta.content or ""
+        if token:
             event = {"type": "text", "content": token}
             yield f"data: {json.dumps(event)}\n\n"
             await asyncio.sleep(0)
