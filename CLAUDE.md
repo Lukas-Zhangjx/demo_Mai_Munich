@@ -13,8 +13,11 @@ git checkout -b feat/xxx   # 新建功能分支
 # ... 写代码、提交 ...
 git checkout dev
 git merge feat/xxx         # 合并回 dev
-git branch -d feat/xxx     # 删除功能分支
+# 分支保留，不删除
 ```
+
+### 分支保留规则
+功能或 bug 修复分支合并后**不删除**，保留完整开发历史。
 
 ### 分支命名
 ```
