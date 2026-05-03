@@ -4,7 +4,7 @@ from typing import List
 
 
 EMBED_MODEL       = "text-embedding-004"
-OUTPUT_DIMENSIONS = 512    # matches Supabase vector(512)
+OUTPUT_DIMENSIONS = 768    # native dim for text-embedding-004
 BATCH_SIZE        = 100
 API_BASE          = "https://generativelanguage.googleapis.com/v1beta/models"
 
@@ -29,9 +29,8 @@ def embed_query(text: str) -> List[float]:
 def _embed_single(text: str, task_type: str) -> List[float]:
     """Call Gemini embedContent for one text."""
     payload = {
-        "content":             {"parts": [{"text": text}]},
-        "outputDimensionality": OUTPUT_DIMENSIONS,
-        "taskType":            task_type,
+        "content":  {"parts": [{"text": text}]},
+        "taskType": task_type,
     }
     url = f"{API_BASE}/{EMBED_MODEL}:embedContent?key={_api_key()}"
     resp = requests.post(url, json=payload, timeout=30)

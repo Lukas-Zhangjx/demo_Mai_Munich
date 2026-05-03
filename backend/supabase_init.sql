@@ -1,4 +1,6 @@
 -- Run this once in Supabase SQL Editor
+-- NOTE: If upgrading from vector(512), drop and recreate the table first:
+--   DROP TABLE IF EXISTS documents;
 
 -- 1. Enable pgvector extension
 create extension if not exists vector;
@@ -7,7 +9,7 @@ create extension if not exists vector;
 create table if not exists documents (
   id          uuid    default gen_random_uuid() primary key,
   content     text    not null,
-  embedding   vector(512),          -- voyage-3-lite dimension
+  embedding   vector(768),          -- text-embedding-004 native dimension
   metadata    jsonb   default '{}',
   created_at  timestamptz default now()
 );
@@ -19,7 +21,7 @@ create index if not exists documents_embedding_idx
 
 -- 4. Match function used by retriever.py
 create or replace function match_documents(
-  query_embedding vector(512),
+  query_embedding vector(768),
   match_threshold float,
   match_count     int
 )
