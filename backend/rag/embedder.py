@@ -2,18 +2,18 @@ import os
 from functools import lru_cache
 from typing import List
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 
 EMBED_MODEL       = "text-embedding-004"
-OUTPUT_DIMENSIONS = 512    # match Supabase vector(512)
+OUTPUT_DIMENSIONS = 512    # matches Supabase vector(512)
 BATCH_SIZE        = 100
 
 
 @lru_cache(maxsize=1)
-def _configure():
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    return True
+def _client():
+    return genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
 
 def embed_texts(texts: List[str]) -> List[List[float]]:
@@ -21,29 +21,29 @@ def embed_texts(texts: List[str]) -> List[List[float]]:
     Embed a list of document texts in batches.
     Returns 512-dimensional vectors using Gemini text-embedding-004.
     """
-    _configure()
     vectors = []
-
     for i in range(0, len(texts), BATCH_SIZE):
         batch = texts[i : i + BATCH_SIZE]
-        result = genai.embed_content(
-            model=f"models/{EMBED_MODEL}",
-            content=batch,
-            task_type="retrieval_document",
-            output_dimensionality=OUTPUT_DIMENSIONS,
+        response = _client().models.embed_content(
+            model=EMBED_MODEL,
+            contents=batch,
+            config=types.EmbedContentConfig(
+                task_type="RETRIEVAL_DOCUMENT",
+                output_dimensionality=OUTPUT_DIMENSIONS,
+            ),
         )
-        vectors.extend(result["embedding"])
-
+        vectors.extend([e.values for e in response.embeddings])
     return vectors
 
 
 def embed_query(text: str) -> List[float]:
     """Embed a single user query for retrieval."""
-    _configure()
-    result = genai.embed_content(
-        model=f"models/{EMBED_MODEL}",
-        content=text,
-        task_type="retrieval_query",
-        output_dimensionality=OUTPUT_DIMENSIONS,
+    response = _client().models.embed_content(
+        model=EMBED_MODEL,
+        contents=text,
+        config=types.EmbedContentConfig(
+            task_type="RETRIEVAL_QUERY",
+            output_dimensionality=OUTPUT_DIMENSIONS,
+        ),
     )
-    return result["embedding"]
+    return response.embeddings[0].values
