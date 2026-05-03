@@ -2,31 +2,48 @@
 
 ## 工作流规范
 
-### 新任务必须先建分支
-每次开始新任务，必须先从 `dev` 新建功能分支，完成后再合并，禁止直接在 `main` 或 `dev` 上提交功能代码。
+> ⚠️ **强制规则：禁止直接向 `main` 提交任何功能或修复代码。所有改动必须走分支流程。**
+
+### 标准分支流程（每次必须严格执行）
 
 ```bash
-# 标准流程
-git checkout dev
+# 1. 从 main 切出功能分支
+git checkout main
 git pull
-git checkout -b feat/xxx   # 新建功能分支
-# ... 写代码、提交 ...
-git checkout dev
-git merge feat/xxx         # 合并回 dev
-# 分支保留，不删除
+git checkout -b fix/xxx        # 或 feat/xxx
+
+# 2. 写代码、提交
+git add <files>
+git commit -m "fix/feat: ..."
+
+# 3. 推送分支到远端
+git push origin fix/xxx
+
+# 4. 合并回 main（--no-ff 保留合并节点，分支树可见）
+git checkout main
+git merge --no-ff fix/xxx -m "merge: fix/xxx into main"
+git push origin main
+
+# 5. 分支保留，不删除
 ```
 
+### 禁止行为
+- ❌ 直接 `git commit` 在 `main` 上
+- ❌ 合并后 `git branch -d` 删除分支
+- ❌ 用 `git push --force` 覆盖历史
+
 ### 分支保留规则
-功能或 bug 修复分支合并后**不删除**，保留完整开发历史。
+功能或 bug 修复分支合并后**不删除**，保留完整开发历史，分支树上必须能看到所有 merge 节点。
 
 ### 分支命名
 ```
-main        稳定版本，只接受来自 dev 的合并
-dev         开发主分支
-feat/xxx    新功能，如 feat/product-upload
-fix/xxx     修复，如 fix/image-path
-style/xxx   样式调整
+main         稳定版本，只接受分支合并，禁止直接提交
+feat/xxx     新功能，如 feat/email-module
+fix/xxx      修复，如 fix/embedding-404
+perf/xxx     性能优化，如 perf/reduce-memory
 refactor/xxx 重构
+docs/xxx     文档更新
+chore/xxx    配置、依赖等杂项
 ```
 
 ---
@@ -164,13 +181,13 @@ function getProducts(category, page) {}
 ### 后端
 - Python + FastAPI
 - LLM：Groq（`llama-3.1-8b-instant`）
-- Embedding：Google Gemini（`text-embedding-004`，512维）
+- Embedding：Google Gemini（`gemini-embedding-001`，768维，outputDimensionality 压缩）
 - 认证：JWT（PyJWT，12小时有效期）
 - 部署：Render（`render.yaml` 在仓库根目录，`rootDir: backend`）
 
 ### 数据库
 - Supabase（PostgreSQL + pgvector）
-- 向量维度：512
+- 向量维度：768
 - 核心表：`documents`（content, embedding, metadata）
 - 核心函数：`match_documents`（余弦相似度检索）
 
