@@ -38,6 +38,20 @@ Always cite which source you used (e.g. "According to Source 1...").
 Be concise and precise."""
 
 
+# ── Debug (remove after fixing) ───────────────────────────────────────────────
+
+@app.get("/debug/supabase")
+def debug_supabase():
+    """Temporary endpoint to surface Supabase connection errors."""
+    import traceback
+    try:
+        client = get_client()
+        result = client.table("documents").select("id").limit(1).execute()
+        return {"status": "ok", "rows": len(result.data)}
+    except Exception as e:
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
+
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
 class LoginRequest(BaseModel):
