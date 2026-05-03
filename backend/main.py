@@ -48,12 +48,20 @@ Be concise and precise."""
 
 @app.get("/debug/supabase")
 def debug_supabase():
-    """Temporary endpoint to surface Supabase connection errors."""
     import traceback
     try:
-        client = get_client()
-        result = client.table("documents").select("id").limit(1).execute()
+        result = get_client().table("documents").select("id").limit(1).execute()
         return {"status": "ok", "rows": len(result.data)}
+    except Exception as e:
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
+@app.get("/debug/embedding")
+def debug_embedding():
+    import traceback
+    try:
+        from rag.embedder import embed_query
+        vec = embed_query("test")
+        return {"status": "ok", "dimensions": len(vec)}
     except Exception as e:
         return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
 
