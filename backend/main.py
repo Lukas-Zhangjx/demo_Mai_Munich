@@ -22,6 +22,12 @@ from auth          import create_token, verify_token, check_credentials
 
 app = FastAPI(title="AI Agent Backend")
 
+# ── Email module (toggle via EMAIL_ENABLED env var) ───────────────────────────
+if os.getenv("EMAIL_ENABLED", "false").lower() == "true":
+    from email_module.router import router as email_router
+    app.include_router(email_router)
+# To disable: set EMAIL_ENABLED=false (or remove the env var entirely)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],     # tighten to your GitHub Pages URL in production
