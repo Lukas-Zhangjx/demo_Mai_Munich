@@ -3,6 +3,9 @@ import json
 import asyncio
 import groq
 import pdfplumber
+from dotenv import load_dotenv
+
+load_dotenv()  # reads backend/.env when running locally
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
