@@ -1,0 +1,15 @@
+# Environment variables — never commit these
+.env
+.env.local
+backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+
+# System
+.DS_Store
