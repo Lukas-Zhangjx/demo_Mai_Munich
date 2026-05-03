@@ -2,7 +2,6 @@ import os
 import json
 import asyncio
 import groq
-import pdfplumber
 from dotenv import load_dotenv
 
 load_dotenv()  # reads backend/.env when running locally
@@ -185,6 +184,7 @@ def _extract_text(raw: bytes, filename: str) -> str:
 
     if name.endswith(".pdf"):
         import io
+        import pdfplumber
         text_parts = []
         with pdfplumber.open(io.BytesIO(raw)) as pdf:
             for page in pdf.pages:
