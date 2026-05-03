@@ -4,15 +4,17 @@ import asyncio
 import groq
 import pdfplumber
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from typing import List, Optional
 
 from rag.chunker   import chunk_text
 from rag.embedder  import embed_texts
 from rag.retriever import retrieve, build_context
 from db.client     import get_client
+from auth          import create_token, verify_token, check_credentials
 
 
 app = FastAPI(title="AI Agent Backend")
@@ -33,6 +35,20 @@ Always cite which source you used (e.g. "According to Source 1...").
 Be concise and precise."""
 
 
+# ── Auth ──────────────────────────────────────────────────────────────────────
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/api/auth/login")
+def login(body: LoginRequest):
+    if not check_credentials(body.username, body.password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    return {"token": create_token(body.username)}
+
+
 # ── Health check ──────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -40,10 +56,13 @@ def health():
     return {"status": "ok"}
 
 
-# ── Document upload ───────────────────────────────────────────────────────────
+# ── Document upload (admin protected) ─────────────────────────────────────────
 
 @app.post("/api/upload")
-async def upload_documents(files: List[UploadFile] = File(...)):
+async def upload_documents(
+    files: List[UploadFile] = File(...),
+    _: str = Depends(verify_token),
+):
     """
     Accept one or more files, chunk and embed them, then store in Supabase.
     Supports: .txt, .pdf, .md
@@ -160,3 +179,34 @@ async def _stream_response(user_message: str, source_chunks: list):
             await asyncio.sleep(0)
 
     yield "data: [DONE]\n\n"
+
+
+# ── Document management (admin protected) ─────────────────────────────────────
+
+@app.get("/api/documents")
+def list_documents(_: str = Depends(verify_token)):
+    """Return all uploaded documents grouped by filename."""
+    rows = (
+        get_client()
+        .table("documents")
+        .select("metadata, created_at")
+        .execute()
+        .data
+    )
+
+    # Group by filename and count chunks
+    summary: dict = {}
+    for row in rows:
+        name = row["metadata"].get("filename", "unknown")
+        if name not in summary:
+            summary[name] = {"filename": name, "chunks": 0, "uploaded_at": row["created_at"]}
+        summary[name]["chunks"] += 1
+
+    return {"documents": sorted(summary.values(), key=lambda d: d["uploaded_at"], reverse=True)}
+
+
+@app.delete("/api/documents/{filename}")
+def delete_document(filename: str, _: str = Depends(verify_token)):
+    """Delete all chunks belonging to a given filename."""
+    get_client().table("documents").delete().eq("metadata->>filename", filename).execute()
+    return {"status": "deleted", "filename": filename}

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin – AI Agent</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/admin.css" />
+</head>
+<body>
+
+  <!-- Login Screen -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card">
+      <div class="login-logo">✦</div>
+      <h2>Admin Login</h2>
+      <p class="login-sub">AI Agent Document Manager</p>
+      <form id="loginForm">
+        <div class="field">
+          <label>Username</label>
+          <input type="text" id="username" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="password" autocomplete="current-password" required />
+        </div>
+        <div class="login-error" id="loginError"></div>
+        <button type="submit" class="btn-primary" id="loginBtn">Login</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Admin Panel -->
+  <div class="admin-app" id="adminApp" style="display:none">
+
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-icon">✦</div>
+          <span class="logo-text">Admin Panel</span>
+        </div>
+        <button class="btn-ghost" id="logoutBtn">Logout</button>
+      </div>
+    </header>
+
+    <main class="admin-main">
+
+      <!-- Upload Section -->
+      <section class="card">
+        <h3>Upload Documents</h3>
+        <p class="section-desc">Supported formats: PDF, TXT, MD</p>
+
+        <div class="drop-zone" id="dropZone">
+          <div class="drop-icon">📂</div>
+          <p>Drag & drop files here, or <span class="link" id="browseLink">browse</span></p>
+          <input type="file" id="fileInput" hidden multiple accept=".pdf,.txt,.md" />
+        </div>
+
+        <div class="upload-queue" id="uploadQueue"></div>
+
+        <button class="btn-primary" id="uploadBtn" disabled>
+          Upload
+        </button>
+      </section>
+
+      <!-- Documents Section -->
+      <section class="card">
+        <div class="section-header">
+          <h3>Uploaded Documents</h3>
+          <button class="btn-ghost" id="refreshBtn">↻ Refresh</button>
+        </div>
+
+        <div id="docList">
+          <div class="empty-state">Loading…</div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>
