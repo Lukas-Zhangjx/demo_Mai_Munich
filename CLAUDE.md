@@ -157,8 +157,54 @@ function getProducts(category, page) {}
 
 ## 技术栈
 
+### 前端
+- 纯静态 HTML / CSS / JS，无框架
+- 部署：GitHub Pages（根目录 `index.html`）
 
+### 后端
+- Python + FastAPI
+- LLM：Groq（`llama-3.1-8b-instant`）
+- Embedding：Google Gemini（`text-embedding-004`，512维）
+- 认证：JWT（PyJWT，12小时有效期）
+- 部署：Render（`render.yaml` 在仓库根目录，`rootDir: backend`）
+
+### 数据库
+- Supabase（PostgreSQL + pgvector）
+- 向量维度：512
+- 核心表：`documents`（content, embedding, metadata）
+- 核心函数：`match_documents`（余弦相似度检索）
+
+### RAG 流程
+```
+上传文档 → chunker（400字/块）→ Gemini Embedding → Supabase pgvector
+用户提问 → Gemini Embedding → 向量检索 Top 5 → Groq 流式生成回答
+```
 
 ## 项目结构
 
-
+```
+demo_Mai_Munich/
+├── index.html          # 用户聊天界面
+├── admin.html          # 管理员后台（文档上传/管理）
+├── css/
+│   ├── style.css       # 公共样式
+│   └── admin.css       # 后台专属样式
+├── js/
+│   ├── app.js          # 聊天逻辑 + SSE
+│   └── admin.js        # 后台逻辑 + JWT
+├── backend/
+│   ├── main.py         # FastAPI 路由
+│   ├── auth.py         # JWT 登录认证
+│   ├── rag/
+│   │   ├── chunker.py  # 文档切块
+│   │   ├── embedder.py # Gemini 向量化
+│   │   └── retriever.py# Supabase 向量检索
+│   ├── db/
+│   │   └── client.py   # Supabase 客户端
+│   ├── requirements.txt
+│   ├── .env.example
+│   └── supabase_init.sql
+├── render.yaml         # Render 部署配置
+├── .gitignore
+└── CLAUDE.md
+```
