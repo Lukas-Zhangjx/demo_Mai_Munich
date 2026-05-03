@@ -65,6 +65,34 @@ def debug_embedding():
     except Exception as e:
         return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
 
+@app.get("/debug/upload-pipeline")
+def debug_upload_pipeline():
+    """Step-by-step test of the full upload pipeline."""
+    import traceback
+    results = {}
+    try:
+        # Step 1: chunk
+        from rag.chunker import chunk_text
+        chunks = chunk_text("This is a test document for debugging.", "test.txt")
+        results["step1_chunk"] = f"ok – {len(chunks)} chunks"
+
+        # Step 2: embed
+        from rag.embedder import embed_texts
+        vectors = embed_texts([c["content"] for c in chunks])
+        results["step2_embed"] = f"ok – {len(vectors)} vectors, dim={len(vectors[0])}"
+
+        # Step 3: insert into Supabase
+        rows = [{"content": c["content"], "embedding": v, "metadata": c["metadata"]}
+                for c, v in zip(chunks, vectors)]
+        get_client().table("documents").insert(rows).execute()
+        results["step3_insert"] = "ok"
+
+        return {"status": "ok", "steps": results}
+    except Exception as e:
+        results["error"] = str(e)
+        results["trace"] = traceback.format_exc()
+        return {"status": "error", "steps": results}
+
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
