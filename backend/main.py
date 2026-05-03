@@ -116,6 +116,10 @@ def health():
 
 # ── Document upload (admin protected) ─────────────────────────────────────────
 
+MAX_FILE_BYTES = 10 * 1024 * 1024   # 10 MB hard limit
+EMBED_BATCH    = 5                   # embed 5 chunks at a time to stay under memory
+
+
 @app.post("/api/upload")
 async def upload_documents(
     files: List[UploadFile] = File(...),
@@ -129,26 +133,34 @@ async def upload_documents(
 
     for file in files:
         raw = await file.read()
+
+        if len(raw) > MAX_FILE_BYTES:
+            results.append({"filename": file.filename, "status": "skipped – file too large (max 10 MB)"})
+            continue
+
         text = _extract_text(raw, file.filename)
+        del raw   # free memory immediately after extraction
 
         if not text.strip():
             results.append({"filename": file.filename, "status": "skipped – empty content"})
             continue
 
-        chunks  = chunk_text(text, file.filename)
-        vectors = embed_texts([c["content"] for c in chunks])
+        chunks = chunk_text(text, file.filename)
+        del text  # free memory
 
-        rows = [
-            {
-                "content":   c["content"],
-                "embedding": v,
-                "metadata":  c["metadata"],
-            }
-            for c, v in zip(chunks, vectors)
-        ]
+        total = 0
+        # embed and insert in small batches to avoid memory spikes
+        for i in range(0, len(chunks), EMBED_BATCH):
+            batch   = chunks[i : i + EMBED_BATCH]
+            vectors = embed_texts([c["content"] for c in batch])
+            rows    = [
+                {"content": c["content"], "embedding": v, "metadata": c["metadata"]}
+                for c, v in zip(batch, vectors)
+            ]
+            get_client().table("documents").insert(rows).execute()
+            total += len(batch)
 
-        get_client().table("documents").insert(rows).execute()
-        results.append({"filename": file.filename, "chunks": len(chunks), "status": "ok"})
+        results.append({"filename": file.filename, "chunks": total, "status": "ok"})
 
     return {"results": results}
 
