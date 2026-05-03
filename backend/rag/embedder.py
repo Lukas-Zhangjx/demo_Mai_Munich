@@ -1,49 +1,51 @@
 import os
-from functools import lru_cache
+import requests
 from typing import List
-
-from google import genai
-from google.genai import types
 
 
 EMBED_MODEL       = "text-embedding-004"
 OUTPUT_DIMENSIONS = 512    # matches Supabase vector(512)
 BATCH_SIZE        = 100
+API_BASE          = "https://generativelanguage.googleapis.com/v1beta/models"
 
 
-@lru_cache(maxsize=1)
-def _client():
-    return genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+def _api_key() -> str:
+    return os.environ["GEMINI_API_KEY"]
 
 
 def embed_texts(texts: List[str]) -> List[List[float]]:
     """
-    Embed a list of document texts in batches.
-    Returns 512-dimensional vectors using Gemini text-embedding-004.
+    Embed a list of document texts via Gemini REST API (batchEmbedContents).
+    Returns 512-dimensional vectors.
     """
     vectors = []
     for i in range(0, len(texts), BATCH_SIZE):
         batch = texts[i : i + BATCH_SIZE]
-        response = _client().models.embed_content(
-            model=EMBED_MODEL,
-            contents=batch,
-            config=types.EmbedContentConfig(
-                task_type="RETRIEVAL_DOCUMENT",
-                output_dimensionality=OUTPUT_DIMENSIONS,
-            ),
-        )
-        vectors.extend([e.values for e in response.embeddings])
+        payload = {
+            "requests": [
+                {
+                    "model":   f"models/{EMBED_MODEL}",
+                    "content": {"parts": [{"text": t}]},
+                    "outputDimensionality": OUTPUT_DIMENSIONS,
+                }
+                for t in batch
+            ]
+        }
+        url = f"{API_BASE}/{EMBED_MODEL}:batchEmbedContents?key={_api_key()}"
+        resp = requests.post(url, json=payload, timeout=30)
+        resp.raise_for_status()
+        vectors.extend([e["values"] for e in resp.json()["embeddings"]])
     return vectors
 
 
 def embed_query(text: str) -> List[float]:
-    """Embed a single user query for retrieval."""
-    response = _client().models.embed_content(
-        model=EMBED_MODEL,
-        contents=text,
-        config=types.EmbedContentConfig(
-            task_type="RETRIEVAL_QUERY",
-            output_dimensionality=OUTPUT_DIMENSIONS,
-        ),
-    )
-    return response.embeddings[0].values
+    """Embed a single user query via Gemini REST API (embedContent)."""
+    payload = {
+        "content":             {"parts": [{"text": text}]},
+        "outputDimensionality": OUTPUT_DIMENSIONS,
+        "taskType":            "RETRIEVAL_QUERY",
+    }
+    url = f"{API_BASE}/{EMBED_MODEL}:embedContent?key={_api_key()}"
+    resp = requests.post(url, json=payload, timeout=30)
+    resp.raise_for_status()
+    return resp.json()["embedding"]["values"]
