@@ -1,4 +1,4 @@
-const API = 'http://localhost:8000';   // change to Render URL after deployment
+const API = 'https://demo-mai-munich.onrender.com';
 const TOKEN_KEY = 'admin_token';
 
 // ── DOM refs ──
