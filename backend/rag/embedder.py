@@ -15,35 +15,23 @@ def _api_key() -> str:
 
 def embed_texts(texts: List[str]) -> List[List[float]]:
     """
-    Embed a list of document texts via Gemini REST API (batchEmbedContents).
+    Embed a list of document texts via Gemini embedContent (one call per text).
     Returns 512-dimensional vectors.
     """
-    vectors = []
-    for i in range(0, len(texts), BATCH_SIZE):
-        batch = texts[i : i + BATCH_SIZE]
-        payload = {
-            "requests": [
-                {
-                    "model":   f"models/{EMBED_MODEL}",
-                    "content": {"parts": [{"text": t}]},
-                    "outputDimensionality": OUTPUT_DIMENSIONS,
-                }
-                for t in batch
-            ]
-        }
-        url = f"{API_BASE}/{EMBED_MODEL}:batchEmbedContents?key={_api_key()}"
-        resp = requests.post(url, json=payload, timeout=30)
-        resp.raise_for_status()
-        vectors.extend([e["values"] for e in resp.json()["embeddings"]])
-    return vectors
+    return [_embed_single(t, task_type="RETRIEVAL_DOCUMENT") for t in texts]
 
 
 def embed_query(text: str) -> List[float]:
-    """Embed a single user query via Gemini REST API (embedContent)."""
+    """Embed a single user query for retrieval."""
+    return _embed_single(text, task_type="RETRIEVAL_QUERY")
+
+
+def _embed_single(text: str, task_type: str) -> List[float]:
+    """Call Gemini embedContent for one text."""
     payload = {
         "content":             {"parts": [{"text": text}]},
         "outputDimensionality": OUTPUT_DIMENSIONS,
-        "taskType":            "RETRIEVAL_QUERY",
+        "taskType":            task_type,
     }
     url = f"{API_BASE}/{EMBED_MODEL}:embedContent?key={_api_key()}"
     resp = requests.post(url, json=payload, timeout=30)
