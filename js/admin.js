@@ -23,14 +23,12 @@ const fileInput    = document.getElementById('fileInput');
 const uploadQueue  = document.getElementById('uploadQueue');
 const uploadBtn    = document.getElementById('uploadBtn');
 const refreshBtn   = document.getElementById('refreshBtn');
-const docList      = document.getElementById('docList');
 
 let pendingFiles = [];
 
 // ── Init ──
 if (getToken()) {
   showApp();
-  loadDocuments();
   loadJobs();
   setInterval(loadJobs, 8000);  // auto-refresh job status every 8s
 }
@@ -143,7 +141,7 @@ uploadBtn.addEventListener('click', async () => {
   pendingFiles = [];
   uploadBtn.disabled = true;
   fileInput.value = '';
-  loadDocuments();
+  loadJobs();
 });
 
 function setQueueStatus(filename, text, cls) {
@@ -153,53 +151,8 @@ function setQueueStatus(filename, text, cls) {
   el.className = `queue-item-status ${cls}`;
 }
 
-// ── Document list ──
-refreshBtn.addEventListener('click', loadDocuments);
-
-async function loadDocuments() {
-  docList.innerHTML = '<div class="empty-state">Loading…</div>';
-
-  try {
-    const res = await apiFetch(`${API}/api/documents`, {
-      headers: { Authorization: `Bearer ${getToken()}` },
-    });
-
-    if (res.status === 401) { handleUnauthorized(); return; }
-
-    const { documents } = await res.json();
-
-    if (!documents.length) {
-      docList.innerHTML = '<div class="empty-state">No documents uploaded yet.</div>';
-      return;
-    }
-
-    docList.innerHTML = '';
-    documents.forEach(doc => docList.appendChild(renderDocItem(doc)));
-  } catch {
-    docList.innerHTML = '<div class="empty-state">Failed to load documents.</div>';
-  }
-}
-
-function renderDocItem(doc) {
-  const item = document.createElement('div');
-  item.className = 'doc-item';
-  item.id = `doc-${doc.filename}`;
-
-  const date = new Date(doc.uploaded_at).toLocaleDateString();
-
-  item.innerHTML = `
-    <div class="doc-info">
-      <span class="doc-name">📄 ${doc.filename}</span>
-      <span class="doc-meta">${doc.chunks} chunks · ${date}</span>
-    </div>
-    <div class="doc-actions">
-      <button class="btn-danger" data-name="${doc.filename}">Delete</button>
-    </div>
-  `;
-
-  item.querySelector('.btn-danger').addEventListener('click', () => deleteDocument(doc.filename));
-  return item;
-}
+// ── Refresh button ──
+refreshBtn.addEventListener('click', loadJobs);
 
 async function deleteDocument(filename) {
   if (!confirm(`Delete "${filename}" and all its chunks?`)) return;
@@ -221,7 +174,7 @@ async function deleteDocument(filename) {
   }
 }
 
-// ── AI Learning Status ──
+// ── Document list (upload_jobs as source of truth) ──
 async function loadJobs() {
   const jobList = document.getElementById('jobList');
   if (!jobList) return;
@@ -242,15 +195,24 @@ async function loadJobs() {
     jobs.forEach(job => {
       const item = document.createElement('div');
       item.className = 'doc-item';
-      const icon   = job.status === 'done' ? '✅' : job.status === 'error' ? '❌' : '🔄';
-      const label  = job.status === 'done'
-        ? `AI 已学习 · ${job.chunks} chunks`
-        : job.status === 'error' ? '处理失败' : 'AI 正在学习中…';
-      const date   = new Date(job.created_at).toLocaleString();
+
+      const statusBadge = job.status === 'done'
+        ? '<span style="color:#16a34a;font-weight:600">✅ AI 已学习</span>'
+        : job.status === 'error'
+        ? '<span style="color:#dc2626;font-weight:600">❌ 处理失败</span>'
+        : '<span style="color:#d97706;font-weight:600">🔄 AI 正在学习中…</span>';
+
+      const meta = job.status === 'done'
+        ? `${job.chunks} chunks · ${new Date(job.created_at).toLocaleString()}`
+        : new Date(job.created_at).toLocaleString();
+
       item.innerHTML = `
         <div class="doc-info">
-          <span class="doc-name">${icon} ${job.filename}</span>
-          <span class="doc-meta">${label} · ${date}</span>
+          <span class="doc-name">📄 ${job.filename}</span>
+          <span class="doc-meta">${meta}</span>
+        </div>
+        <div class="doc-actions">
+          ${statusBadge}
         </div>`;
       jobList.appendChild(item);
     });
