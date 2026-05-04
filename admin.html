@@ -13,19 +13,19 @@
   <div class="login-overlay" id="loginOverlay">
     <div class="login-card">
       <div class="login-logo">✦</div>
-      <h2>Admin Login</h2>
-      <p class="login-sub">AI Agent Document Manager</p>
+      <h2 data-i18n="login.title">Admin Login</h2>
+      <p class="login-sub" data-i18n="login.sub">AI Agent Document Manager</p>
       <form id="loginForm">
         <div class="field">
-          <label>Username</label>
+          <label data-i18n="login.username">Username</label>
           <input type="text" id="username" autocomplete="username" required />
         </div>
         <div class="field">
-          <label>Password</label>
+          <label data-i18n="login.password">Password</label>
           <input type="password" id="password" autocomplete="current-password" required />
         </div>
         <div class="login-error" id="loginError"></div>
-        <button type="submit" class="btn-primary" id="loginBtn">Login</button>
+        <button type="submit" class="btn-primary" id="loginBtn" data-i18n="login.btn">Login</button>
       </form>
     </div>
   </div>
@@ -37,9 +37,12 @@
       <div class="header-inner">
         <div class="logo">
           <div class="logo-icon">✦</div>
-          <span class="logo-text">Admin Panel</span>
+          <span class="logo-text" data-i18n="admin.title">Admin Panel</span>
         </div>
-        <button class="btn-ghost" id="logoutBtn">Logout</button>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button id="langToggle" class="btn-ghost" style="min-width:36px;font-weight:600">DE</button>
+          <button class="btn-ghost" id="logoutBtn" data-i18n="admin.logout">Logout</button>
+        </div>
       </div>
     </header>
 
@@ -47,18 +50,21 @@
 
       <!-- Upload Section -->
       <section class="card">
-        <h3>Upload Documents</h3>
-        <p class="section-desc">Supported formats: PDF, TXT, MD</p>
+        <h3 data-i18n="upload.heading">Upload Documents</h3>
+        <p class="section-desc" data-i18n="upload.formats">Supported formats: PDF, TXT, MD</p>
 
         <div class="drop-zone" id="dropZone">
           <div class="drop-icon">📂</div>
-          <p>Drag & drop files here, or <span class="link" id="browseLink">browse</span></p>
+          <p>
+            <span data-i18n="upload.dropzone">Drag & drop files here, or</span>
+            <span class="link" id="browseLink" data-i18n="upload.browse">browse</span>
+          </p>
           <input type="file" id="fileInput" hidden multiple accept=".pdf,.txt,.md" />
         </div>
 
         <div class="upload-queue" id="uploadQueue"></div>
 
-        <button class="btn-primary" id="uploadBtn" disabled>
+        <button class="btn-primary" id="uploadBtn" disabled data-i18n="upload.btn">
           Upload
         </button>
       </section>
@@ -66,18 +72,19 @@
       <!-- Documents + AI Status (unified) -->
       <section class="card">
         <div class="section-header">
-          <h3>📂 已上传文档</h3>
-          <button class="btn-ghost" id="refreshBtn">↻ 刷新</button>
+          <h3 data-i18n="docs.heading">📂 Uploaded Documents</h3>
+          <button class="btn-ghost" id="refreshBtn" data-i18n="docs.refresh">↻ Refresh</button>
         </div>
         <div id="jobList">
-          <div class="empty-state">暂无上传记录</div>
+          <div class="empty-state" data-i18n="docs.empty">No uploads yet</div>
         </div>
       </section>
 
     </main>
   </div>
 
-  <script src="config.js?v=3"></script>
-  <script src="js/admin.js?v=3"></script>
+  <script src="config.js?v=4"></script>
+  <script src="js/i18n.js?v=4"></script>
+  <script src="js/admin.js?v=4"></script>
 </body>
 </html>
