@@ -128,6 +128,8 @@ uploadBtn.addEventListener('click', async () => {
 
       if (result?.status === 'ok') {
         setQueueStatus(file.name, `✓ ${result.chunks} chunks`, 'success');
+      } else if (result?.status === 'processing') {
+        setQueueStatus(file.name, '⏳ Processing… refresh list in 30s', 'success');
       } else {
         setQueueStatus(file.name, result?.status || 'Error', 'error');
       }

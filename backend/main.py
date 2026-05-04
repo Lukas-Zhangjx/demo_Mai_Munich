@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()  # reads backend/.env when running locally
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -121,13 +121,32 @@ MAX_FILE_BYTES = 10 * 1024 * 1024   # 10 MB hard limit
 EMBED_BATCH    = 5                   # embed 5 chunks at a time to stay under memory
 
 
-@app.post("/api/upload")
+def _process_upload(raw: bytes, filename: str):
+    """Run in background: extract → chunk → embed → insert."""
+    text = _extract_text(raw, filename)
+    del raw
+    if not text.strip():
+        return
+    chunks = chunk_text(text, filename)
+    del text
+    for i in range(0, len(chunks), EMBED_BATCH):
+        batch   = chunks[i : i + EMBED_BATCH]
+        vectors = embed_texts([c["content"] for c in batch])
+        rows    = [
+            {"content": c["content"], "embedding": v, "metadata": c["metadata"]}
+            for c, v in zip(batch, vectors)
+        ]
+        get_client().table("documents").insert(rows).execute()
+
+
+@app.post("/api/upload", status_code=202)
 async def upload_documents(
+    background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(...),
     _: str = Depends(verify_token),
 ):
     """
-    Accept one or more files, chunk and embed them, then store in Supabase.
+    Accept files and immediately return 202. Processing runs in background.
     Supports: .txt, .pdf, .md
     """
     results = []
@@ -139,29 +158,8 @@ async def upload_documents(
             results.append({"filename": file.filename, "status": "skipped – file too large (max 10 MB)"})
             continue
 
-        text = _extract_text(raw, file.filename)
-        del raw   # free memory immediately after extraction
-
-        if not text.strip():
-            results.append({"filename": file.filename, "status": "skipped – empty content"})
-            continue
-
-        chunks = chunk_text(text, file.filename)
-        del text  # free memory
-
-        total = 0
-        # embed and insert in small batches to avoid memory spikes
-        for i in range(0, len(chunks), EMBED_BATCH):
-            batch   = chunks[i : i + EMBED_BATCH]
-            vectors = embed_texts([c["content"] for c in batch])
-            rows    = [
-                {"content": c["content"], "embedding": v, "metadata": c["metadata"]}
-                for c, v in zip(batch, vectors)
-            ]
-            get_client().table("documents").insert(rows).execute()
-            total += len(batch)
-
-        results.append({"filename": file.filename, "chunks": total, "status": "ok"})
+        background_tasks.add_task(_process_upload, raw, file.filename)
+        results.append({"filename": file.filename, "status": "processing"})
 
     return {"results": results}
 
