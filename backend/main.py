@@ -121,25 +121,41 @@ MAX_FILE_BYTES = 10 * 1024 * 1024   # 10 MB hard limit
 EMBED_BATCH    = 5                   # embed 5 chunks at a time to stay under memory
 
 
-def _process_upload(raw: bytes, filename: str):
-    """Run in background: extract → chunk → embed → insert."""
-    from supabase import create_client  # fresh client per task (thread-safe)
+def _process_upload(job_id: str, raw: bytes, filename: str):
+    """Background task: extract → chunk → embed → insert, then update job status."""
+    from supabase import create_client
     db = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
-    text = _extract_text(raw, filename)
-    del raw
-    if not text.strip():
-        return
-    chunks = chunk_text(text, filename)
-    del text
-    for i in range(0, len(chunks), EMBED_BATCH):
-        batch   = chunks[i : i + EMBED_BATCH]
-        vectors = embed_texts([c["content"] for c in batch])
-        rows    = [
-            {"content": c["content"], "embedding": v, "metadata": c["metadata"]}
-            for c, v in zip(batch, vectors)
-        ]
-        db.table("documents").insert(rows).execute()
+    try:
+        text = _extract_text(raw, filename)
+        del raw
+        if not text.strip():
+            db.table("upload_jobs").update({"status": "error", "updated_at": "now()"}).eq("id", job_id).execute()
+            return
+
+        chunks = chunk_text(text, filename)
+        del text
+        total = 0
+
+        for i in range(0, len(chunks), EMBED_BATCH):
+            batch   = chunks[i : i + EMBED_BATCH]
+            vectors = embed_texts([c["content"] for c in batch])
+            rows    = [
+                {"content": c["content"], "embedding": v, "metadata": c["metadata"]}
+                for c, v in zip(batch, vectors)
+            ]
+            db.table("documents").insert(rows).execute()
+            total += len(batch)
+
+        db.table("upload_jobs").update({
+            "status": "done",
+            "chunks": total,
+            "updated_at": "now()"
+        }).eq("id", job_id).execute()
+
+    except Exception as e:
+        db.table("upload_jobs").update({"status": "error", "updated_at": "now()"}).eq("id", job_id).execute()
+        raise
 
 
 @app.post("/api/upload", status_code=202)
@@ -149,8 +165,8 @@ async def upload_documents(
     _: str = Depends(verify_token),
 ):
     """
-    Accept files and immediately return 202. Processing runs in background.
-    Supports: .txt, .pdf, .md
+    Accept files, create a job record, then process in background.
+    Returns job IDs immediately for status polling.
     """
     results = []
 
@@ -161,10 +177,30 @@ async def upload_documents(
             results.append({"filename": file.filename, "status": "skipped – file too large (max 10 MB)"})
             continue
 
-        background_tasks.add_task(_process_upload, raw, file.filename)
-        results.append({"filename": file.filename, "status": "processing"})
+        # Create job record first
+        job = get_client().table("upload_jobs").insert({
+            "filename": file.filename,
+            "status": "processing",
+        }).execute().data[0]
+
+        background_tasks.add_task(_process_upload, job["id"], raw, file.filename)
+        results.append({"filename": file.filename, "job_id": job["id"], "status": "processing"})
 
     return {"results": results}
+
+
+@app.get("/api/upload-jobs")
+def get_upload_jobs(_: str = Depends(verify_token)):
+    """Return all upload jobs with their status."""
+    rows = (
+        get_client()
+        .table("upload_jobs")
+        .select("*")
+        .order("created_at", desc=True)
+        .execute()
+        .data
+    )
+    return {"jobs": rows}
 
 
 # ── Chat (SSE streaming) ──────────────────────────────────────────────────────
