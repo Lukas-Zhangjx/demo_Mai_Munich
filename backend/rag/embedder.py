@@ -1,12 +1,10 @@
 import os
 import requests
 from typing import List
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 EMBED_MODEL       = "gemini-embedding-001"
 OUTPUT_DIMENSIONS = 768    # compressed from 3072 native dims
-MAX_WORKERS       = 8      # concurrent Gemini API calls
 API_BASE          = "https://generativelanguage.googleapis.com/v1beta/models"
 
 
@@ -16,18 +14,10 @@ def _api_key() -> str:
 
 def embed_texts(texts: List[str]) -> List[List[float]]:
     """
-    Embed a list of document texts via Gemini embedContent.
-    Calls are made concurrently to speed up large uploads.
+    Embed a list of document texts via Gemini embedContent (sequential).
+    Sequential to avoid Gemini free-tier rate limits and thread pool issues.
     """
-    results = [None] * len(texts)
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {
-            executor.submit(_embed_single, t, "RETRIEVAL_DOCUMENT"): i
-            for i, t in enumerate(texts)
-        }
-        for future in as_completed(futures):
-            results[futures[future]] = future.result()
-    return results
+    return [_embed_single(t, task_type="RETRIEVAL_DOCUMENT") for t in texts]
 
 
 def embed_query(text: str) -> List[float]:
