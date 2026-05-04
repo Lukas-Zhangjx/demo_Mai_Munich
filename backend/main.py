@@ -37,8 +37,9 @@ app.add_middleware(
 groq_client = groq.Groq(api_key=os.environ["GROQ_API_KEY"])
 
 SYSTEM_PROMPT = """You are a helpful AI agent assisting users with their questions.
-When context from documents is provided, base your answer on that context.
-If the context doesn't contain enough information, say so clearly.
+When context from documents is provided, base your answer strictly on that context.
+If the context doesn't contain enough information to answer the question, say clearly: "I don't have enough information to answer this."
+Never make up facts, figures, or details that are not explicitly stated in the provided context.
 Always cite which source you used (e.g. "According to Source 1...").
 Be concise and precise."""
 
