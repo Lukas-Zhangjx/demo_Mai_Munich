@@ -1,5 +1,5 @@
 const CONFIG = {
-  apiUrl: 'https://crumpled-output-mud.ngrok-free.dev',
+  apiUrl: 'https://demo-mai-munich.onrender.com',
   streamEnabled: true,
 };
 

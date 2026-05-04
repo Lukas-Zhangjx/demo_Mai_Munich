@@ -1,4 +1,4 @@
-const API = 'https://crumpled-output-mud.ngrok-free.dev';
+const API = 'https://demo-mai-munich.onrender.com';
 const TOKEN_KEY = 'admin_token';
 
 // Wrapper that injects ngrok bypass header on every request
