@@ -123,6 +123,9 @@ EMBED_BATCH    = 5                   # embed 5 chunks at a time to stay under me
 
 def _process_upload(raw: bytes, filename: str):
     """Run in background: extract → chunk → embed → insert."""
+    from supabase import create_client  # fresh client per task (thread-safe)
+    db = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+
     text = _extract_text(raw, filename)
     del raw
     if not text.strip():
@@ -136,7 +139,7 @@ def _process_upload(raw: bytes, filename: str):
             {"content": c["content"], "embedding": v, "metadata": c["metadata"]}
             for c, v in zip(batch, vectors)
         ]
-        get_client().table("documents").insert(rows).execute()
+        db.table("documents").insert(rows).execute()
 
 
 @app.post("/api/upload", status_code=202)
