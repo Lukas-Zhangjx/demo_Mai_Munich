@@ -55,7 +55,9 @@ def _split(text: str) -> List[str]:
         )
 
         chunks.append(text[start:split_at].strip())
-        start = split_at - CHUNK_OVERLAP
+        new_start = split_at - CHUNK_OVERLAP
+        # Always advance forward to prevent infinite loop
+        start = new_start if new_start > start else start + (CHUNK_SIZE - CHUNK_OVERLAP)
 
     return [c for c in chunks if c]
 
