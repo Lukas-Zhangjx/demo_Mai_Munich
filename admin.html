@@ -69,6 +69,22 @@
         </button>
       </section>
 
+      <!-- Backend URL Settings -->
+      <section class="card">
+        <h3 data-i18n="settings.heading">⚙️ Settings</h3>
+        <p class="section-desc" data-i18n="settings.desc">Set the backend URL (ngrok or production). Saved locally in your browser.</p>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <input
+            type="url"
+            id="apiUrlInput"
+            placeholder="https://xxxx.ngrok-free.app"
+            style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg-secondary, #f9f9f9)"
+          />
+          <button class="btn-primary" id="saveApiUrlBtn" data-i18n="settings.save">Save</button>
+        </div>
+        <p id="apiUrlStatus" style="margin-top:8px;font-size:13px;color:#16a34a;display:none" data-i18n="settings.saved">✓ Saved — reload the page to apply.</p>
+      </section>
+
       <!-- Documents + AI Status (unified) -->
       <section class="card">
         <div class="section-header">
@@ -83,8 +99,8 @@
     </main>
   </div>
 
-  <script src="config.js?v=4"></script>
-  <script src="js/i18n.js?v=4"></script>
-  <script src="js/admin.js?v=4"></script>
+  <script src="config.js?v=5"></script>
+  <script src="js/i18n.js?v=5"></script>
+  <script src="js/admin.js?v=5"></script>
 </body>
 </html>

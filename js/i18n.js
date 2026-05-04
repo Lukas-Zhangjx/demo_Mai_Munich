@@ -31,6 +31,12 @@ const TRANSLATIONS = {
     'job.done':            'AI learned ✓',
     'job.error':           'Error',
     'job.delete':          'Delete',
+
+    // admin.html – settings
+    'settings.heading':    '⚙️ Settings',
+    'settings.desc':       'Set the backend URL (ngrok or production). Saved locally in your browser.',
+    'settings.save':       'Save',
+    'settings.saved':      '✓ Saved — reload the page to apply.',
   },
   de: {
     // index.html
@@ -62,6 +68,12 @@ const TRANSLATIONS = {
     'job.done':            'KI gelernt ✓',
     'job.error':           'Fehler',
     'job.delete':          'Löschen',
+
+    // admin.html – settings
+    'settings.heading':    '⚙️ Einstellungen',
+    'settings.desc':       'Backend-URL eingeben (ngrok oder Produktion). Wird lokal im Browser gespeichert.',
+    'settings.save':       'Speichern',
+    'settings.saved':      '✓ Gespeichert — Seite neu laden zum Anwenden.',
   },
 };
 

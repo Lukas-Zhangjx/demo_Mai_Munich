@@ -176,6 +176,27 @@ async function deleteJob(jobId, filename) {
 // ── Refresh button ──
 refreshBtn.addEventListener('click', loadJobs);
 
+// ── API URL Settings ──
+const apiUrlInput  = document.getElementById('apiUrlInput');
+const saveApiUrlBtn = document.getElementById('saveApiUrlBtn');
+const apiUrlStatus  = document.getElementById('apiUrlStatus');
+
+// Pre-fill with current saved value
+if (apiUrlInput) {
+  apiUrlInput.value = localStorage.getItem('api_base') || '';
+}
+
+if (saveApiUrlBtn) {
+  saveApiUrlBtn.addEventListener('click', () => {
+    const url = (apiUrlInput.value || '').trim().replace(/\/$/, '');
+    if (!url) return;
+    localStorage.setItem('api_base', url);
+    apiUrlStatus.style.display = 'block';
+    apiUrlStatus.textContent = t('settings.saved');
+    setTimeout(() => { apiUrlStatus.style.display = 'none'; }, 4000);
+  });
+}
+
 // ── Document list (upload_jobs as source of truth) ──
 async function loadJobs() {
   const jobList = document.getElementById('jobList');
