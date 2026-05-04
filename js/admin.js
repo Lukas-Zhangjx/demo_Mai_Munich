@@ -31,6 +31,8 @@ let pendingFiles = [];
 if (getToken()) {
   showApp();
   loadDocuments();
+  loadJobs();
+  setInterval(loadJobs, 8000);  // auto-refresh job status every 8s
 }
 
 // ── Login ──
@@ -126,10 +128,10 @@ uploadBtn.addEventListener('click', async () => {
       const data = await res.json();
       const result = data.results?.[0];
 
-      if (result?.status === 'ok') {
+      if (result?.status === 'processing') {
+        setQueueStatus(file.name, '✓ 已接收，AI 正在学习中…', 'success');
+      } else if (result?.status === 'ok') {
         setQueueStatus(file.name, `✓ ${result.chunks} chunks`, 'success');
-      } else if (result?.status === 'processing') {
-        setQueueStatus(file.name, '⏳ Processing… refresh list in 30s', 'success');
       } else {
         setQueueStatus(file.name, result?.status || 'Error', 'error');
       }
@@ -216,6 +218,44 @@ async function deleteDocument(filename) {
   } catch {
     alert('Delete failed. Please try again.');
     if (el) el.style.opacity = '1';
+  }
+}
+
+// ── AI Learning Status ──
+async function loadJobs() {
+  const jobList = document.getElementById('jobList');
+  if (!jobList) return;
+
+  try {
+    const res = await apiFetch(`${API}/api/upload-jobs`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (!res.ok) return;
+
+    const { jobs } = await res.json();
+    if (!jobs.length) {
+      jobList.innerHTML = '<div class="empty-state">暂无上传记录</div>';
+      return;
+    }
+
+    jobList.innerHTML = '';
+    jobs.forEach(job => {
+      const item = document.createElement('div');
+      item.className = 'doc-item';
+      const icon   = job.status === 'done' ? '✅' : job.status === 'error' ? '❌' : '🔄';
+      const label  = job.status === 'done'
+        ? `AI 已学习 · ${job.chunks} chunks`
+        : job.status === 'error' ? '处理失败' : 'AI 正在学习中…';
+      const date   = new Date(job.created_at).toLocaleString();
+      item.innerHTML = `
+        <div class="doc-info">
+          <span class="doc-name">${icon} ${job.filename}</span>
+          <span class="doc-meta">${label} · ${date}</span>
+        </div>`;
+      jobList.appendChild(item);
+    });
+  } catch {
+    // silently ignore
   }
 }
 
