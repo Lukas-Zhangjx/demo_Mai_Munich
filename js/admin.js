@@ -1,4 +1,4 @@
-const API = 'https://demo-mai-munich.onrender.com';
+const API = typeof API_BASE !== 'undefined' ? API_BASE : 'https://demo-mai-munich.onrender.com';
 const TOKEN_KEY = 'admin_token';
 
 // Wrapper that injects ngrok bypass header on every request

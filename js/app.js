@@ -1,5 +1,5 @@
 const CONFIG = {
-  apiUrl: 'https://demo-mai-munich.onrender.com',
+  apiUrl: typeof API_BASE !== 'undefined' ? API_BASE : 'https://demo-mai-munich.onrender.com',
   streamEnabled: true,
 };
 
