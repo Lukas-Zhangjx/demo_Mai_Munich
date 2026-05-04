@@ -79,6 +79,28 @@ chore: add ESLint and Prettier config
 
 ---
 
+## Security Rules
+
+> ⚠️ **These rules are mandatory and apply to every commit without exception.**
+
+### Frontend data policy
+- The frontend (HTML / CSS / JS) contains **UI code only**
+- **Strictly forbidden:** any real company data, business documents, or confidential content in frontend files
+- **Strictly forbidden:** hard-coding any API key, secret, token, or password anywhere in frontend code
+- All API keys must live exclusively in `backend/.env` (which is git-ignored)
+
+### Secret management
+- `backend/.env` is **never committed** — it is listed in `.gitignore`
+- Use `backend/.env.example` with placeholder values as the only committed reference
+- If a secret is accidentally committed, rotate it immediately before doing anything else
+
+### NDA compliance
+- Documents provided by the hackathon organiser are confidential under the signed NDA
+- Such documents must **only** be stored locally (local PostgreSQL) — never uploaded to any cloud service (Supabase, Render, S3, etc.)
+- Demo documents for cloud environments must be self-prepared, publicly available content only
+
+---
+
 ## 代码规范
 
 ### 命名
