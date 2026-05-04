@@ -128,18 +128,25 @@ def _process_upload(job_id: str, raw: bytes, filename: str):
     db = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
     try:
+        print(f"[UPLOAD] step1: extracting text from {filename}")
         text = _extract_text(raw, filename)
         del raw
+        print(f"[UPLOAD] step1 done: {len(text)} chars")
+
         if not text.strip():
+            print(f"[UPLOAD] empty content, aborting")
             db.table("upload_jobs").update({"status": "error", "updated_at": "now()"}).eq("id", job_id).execute()
             return
 
+        print(f"[UPLOAD] step2: chunking")
         chunks = chunk_text(text, filename)
         del text
-        total = 0
+        print(f"[UPLOAD] step2 done: {len(chunks)} chunks")
 
+        total = 0
         for i in range(0, len(chunks), EMBED_BATCH):
             batch   = chunks[i : i + EMBED_BATCH]
+            print(f"[UPLOAD] step3: embedding batch {i//EMBED_BATCH + 1}")
             vectors = embed_texts([c["content"] for c in batch])
             rows    = [
                 {"content": c["content"], "embedding": v, "metadata": c["metadata"]}
@@ -148,6 +155,7 @@ def _process_upload(job_id: str, raw: bytes, filename: str):
             db.table("documents").insert(rows).execute()
             total += len(batch)
 
+        print(f"[UPLOAD] done: {total} chunks inserted")
         db.table("upload_jobs").update({
             "status": "done",
             "chunks": total,
