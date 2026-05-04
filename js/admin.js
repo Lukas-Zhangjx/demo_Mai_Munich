@@ -1,4 +1,4 @@
-const API = 'https://demo-mai-munich.onrender.com';
+const API = 'https://crumpled-output-mud.ngrok-free.dev';
 const TOKEN_KEY = 'admin_token';
 
 // ── DOM refs ──
