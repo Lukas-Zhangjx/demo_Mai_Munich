@@ -38,7 +38,7 @@ loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   loginError.textContent = '';
   loginBtn.disabled = true;
-  loginBtn.textContent = 'Logging in…';
+  loginBtn.textContent = t('login.btn') + '…';
 
   try {
     const res = await apiFetch(`${API}/api/auth/login`, {
@@ -51,19 +51,24 @@ loginForm.addEventListener('submit', async (e) => {
     });
 
     if (!res.ok) {
-      loginError.textContent = 'Invalid username or password.';
+      loginError.textContent = currentLang === 'de'
+        ? 'Ungültiger Benutzername oder Passwort.'
+        : 'Invalid username or password.';
       return;
     }
 
     const { token } = await res.json();
     setToken(token);
     showApp();
-    loadDocuments();
+    loadJobs();
+    setInterval(loadJobs, 8000);
   } catch {
-    loginError.textContent = 'Cannot connect to backend.';
+    loginError.textContent = currentLang === 'de'
+      ? 'Keine Verbindung zum Backend.'
+      : 'Cannot connect to backend.';
   } finally {
     loginBtn.disabled = false;
-    loginBtn.textContent = 'Login';
+    loginBtn.textContent = t('login.btn');
   }
 });
 
@@ -99,7 +104,7 @@ function renderQueueItem(file) {
   item.id = `queue-${file.name}`;
   item.innerHTML = `
     <div class="queue-item-name">📄 <span>${file.name}</span></div>
-    <span class="queue-item-status" id="status-${file.name}">Ready</span>
+    <span class="queue-item-status" id="status-${file.name}">${t('status.ready')}</span>
   `;
   uploadQueue.appendChild(item);
 }
@@ -110,7 +115,7 @@ uploadBtn.addEventListener('click', async () => {
   uploadBtn.disabled = true;
 
   for (const file of pendingFiles) {
-    setQueueStatus(file.name, 'Uploading…', '');
+    setQueueStatus(file.name, currentLang === 'de' ? 'Wird hochgeladen…' : 'Uploading…', '');
     const fd = new FormData();
     fd.append('files', file);
 
@@ -127,14 +132,14 @@ uploadBtn.addEventListener('click', async () => {
       const result = data.results?.[0];
 
       if (result?.status === 'processing') {
-        setQueueStatus(file.name, '✓ 已接收，AI 正在学习中…', 'success');
+        setQueueStatus(file.name, '✓ ' + t('job.learning'), 'success');
       } else if (result?.status === 'ok') {
         setQueueStatus(file.name, `✓ ${result.chunks} chunks`, 'success');
       } else {
-        setQueueStatus(file.name, result?.status || 'Error', 'error');
+        setQueueStatus(file.name, result?.status || t('job.error'), 'error');
       }
     } catch {
-      setQueueStatus(file.name, 'Upload failed', 'error');
+      setQueueStatus(file.name, currentLang === 'de' ? 'Upload fehlgeschlagen' : 'Upload failed', 'error');
     }
   }
 
@@ -153,7 +158,10 @@ function setQueueStatus(filename, text, cls) {
 
 // ── Delete job ──
 async function deleteJob(jobId, filename) {
-  if (!confirm(`删除 "${filename}" 及其所有数据？`)) return;
+  const msg = currentLang === 'de'
+    ? `"${filename}" und alle zugehörigen Daten löschen?`
+    : `Delete "${filename}" and all its data?`;
+  if (!confirm(msg)) return;
   try {
     await apiFetch(`${API}/api/upload-jobs/${jobId}`, {
       method: 'DELETE',
@@ -161,32 +169,12 @@ async function deleteJob(jobId, filename) {
     });
     loadJobs();
   } catch {
-    alert('删除失败，请重试');
+    alert(currentLang === 'de' ? 'Löschen fehlgeschlagen' : 'Delete failed');
   }
 }
 
 // ── Refresh button ──
 refreshBtn.addEventListener('click', loadJobs);
-
-async function deleteDocument(filename) {
-  if (!confirm(`Delete "${filename}" and all its chunks?`)) return;
-
-  const el = document.getElementById(`doc-${filename}`);
-  if (el) el.style.opacity = '0.5';
-
-  try {
-    const res = await apiFetch(`${API}/api/documents/${encodeURIComponent(filename)}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${getToken()}` },
-    });
-
-    if (res.status === 401) { handleUnauthorized(); return; }
-    loadDocuments();
-  } catch {
-    alert('Delete failed. Please try again.');
-    if (el) el.style.opacity = '1';
-  }
-}
 
 // ── Document list (upload_jobs as source of truth) ──
 async function loadJobs() {
@@ -201,7 +189,7 @@ async function loadJobs() {
 
     const { jobs } = await res.json();
     if (!jobs.length) {
-      jobList.innerHTML = '<div class="empty-state">暂无上传记录</div>';
+      jobList.innerHTML = `<div class="empty-state">${t('docs.empty')}</div>`;
       return;
     }
 
@@ -211,10 +199,10 @@ async function loadJobs() {
       item.className = 'doc-item';
 
       const statusBadge = job.status === 'done'
-        ? '<span style="color:#16a34a;font-weight:600">✅ AI 已学习</span>'
+        ? `<span style="color:#16a34a;font-weight:600">✅ ${t('job.done')}</span>`
         : job.status === 'error'
-        ? '<span style="color:#dc2626;font-weight:600">❌ 处理失败</span>'
-        : '<span style="color:#d97706;font-weight:600">🔄 AI 正在学习中…</span>';
+        ? `<span style="color:#dc2626;font-weight:600">❌ ${t('job.error')}</span>`
+        : `<span style="color:#d97706;font-weight:600">🔄 ${t('job.learning')}</span>`;
 
       const meta = job.status === 'done'
         ? `${job.chunks} chunks · ${new Date(job.created_at).toLocaleString()}`
@@ -227,7 +215,7 @@ async function loadJobs() {
         </div>
         <div class="doc-actions" style="display:flex;align-items:center;gap:12px;">
           ${statusBadge}
-          <button class="btn-danger" data-id="${job.id}">删除</button>
+          <button class="btn-danger" data-id="${job.id}">${t('job.delete')}</button>
         </div>`;
       item.querySelector('.btn-danger').addEventListener('click', () => deleteJob(job.id, job.filename));
       jobList.appendChild(item);
@@ -246,10 +234,10 @@ function showApp() {
 
 function handleUnauthorized() {
   clearToken();
-  alert('Session expired. Please log in again.');
+  alert(currentLang === 'de' ? 'Sitzung abgelaufen. Bitte erneut anmelden.' : 'Session expired. Please log in again.');
   location.reload();
 }
 
 function getToken()      { return localStorage.getItem(TOKEN_KEY); }
-function setToken(t)     { localStorage.setItem(TOKEN_KEY, t); }
+function setToken(tk)    { localStorage.setItem(TOKEN_KEY, tk); }
 function clearToken()    { localStorage.removeItem(TOKEN_KEY); }
