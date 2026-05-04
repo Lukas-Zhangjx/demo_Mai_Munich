@@ -3,6 +3,15 @@ const CONFIG = {
   streamEnabled: true,
 };
 
+// Wrapper that injects ngrok bypass header on every request
+function apiFetch(url, options = {}) {
+  options.headers = {
+    'ngrok-skip-browser-warning': '1',
+    ...options.headers,
+  };
+  return fetch(url, options);
+}
+
 // ── State ──
 const state = {
   conversationId: crypto.randomUUID(),
@@ -55,7 +64,7 @@ async function sendMessage() {
 
   try {
     const formData = buildFormData(text);
-    const response = await fetch(`${CONFIG.apiUrl}/api/chat`, {
+    const response = await apiFetch(`${CONFIG.apiUrl}/api/chat`, {
       method: 'POST',
       body: formData,
     });
@@ -273,7 +282,7 @@ function buildFormData(text) {
 // ── Backend health check ──
 async function checkBackendHealth() {
   try {
-    const res = await fetch(`${CONFIG.apiUrl}/health`, { signal: AbortSignal.timeout(3000) });
+    const res = await apiFetch(`${CONFIG.apiUrl}/health`, { signal: AbortSignal.timeout(3000) });
     if (res.ok) {
       setStatus('ready', 'Connected');
     } else {

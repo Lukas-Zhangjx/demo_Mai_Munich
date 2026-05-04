@@ -1,6 +1,15 @@
 const API = 'https://crumpled-output-mud.ngrok-free.dev';
 const TOKEN_KEY = 'admin_token';
 
+// Wrapper that injects ngrok bypass header on every request
+function apiFetch(url, options = {}) {
+  options.headers = {
+    'ngrok-skip-browser-warning': '1',
+    ...options.headers,
+  };
+  return fetch(url, options);
+}
+
 // ── DOM refs ──
 const loginOverlay = document.getElementById('loginOverlay');
 const adminApp     = document.getElementById('adminApp');
@@ -32,7 +41,7 @@ loginForm.addEventListener('submit', async (e) => {
   loginBtn.textContent = 'Logging in…';
 
   try {
-    const res = await fetch(`${API}/api/auth/login`, {
+    const res = await apiFetch(`${API}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -106,7 +115,7 @@ uploadBtn.addEventListener('click', async () => {
     fd.append('files', file);
 
     try {
-      const res = await fetch(`${API}/api/upload`, {
+      const res = await apiFetch(`${API}/api/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${getToken()}` },
         body: fd,
@@ -147,7 +156,7 @@ async function loadDocuments() {
   docList.innerHTML = '<div class="empty-state">Loading…</div>';
 
   try {
-    const res = await fetch(`${API}/api/documents`, {
+    const res = await apiFetch(`${API}/api/documents`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     });
 
@@ -195,7 +204,7 @@ async function deleteDocument(filename) {
   if (el) el.style.opacity = '0.5';
 
   try {
-    const res = await fetch(`${API}/api/documents/${encodeURIComponent(filename)}`, {
+    const res = await apiFetch(`${API}/api/documents/${encodeURIComponent(filename)}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${getToken()}` },
     });
