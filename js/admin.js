@@ -151,6 +151,20 @@ function setQueueStatus(filename, text, cls) {
   el.className = `queue-item-status ${cls}`;
 }
 
+// ── Delete job ──
+async function deleteJob(jobId, filename) {
+  if (!confirm(`删除 "${filename}" 及其所有数据？`)) return;
+  try {
+    await apiFetch(`${API}/api/upload-jobs/${jobId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    loadJobs();
+  } catch {
+    alert('删除失败，请重试');
+  }
+}
+
 // ── Refresh button ──
 refreshBtn.addEventListener('click', loadJobs);
 
@@ -211,9 +225,11 @@ async function loadJobs() {
           <span class="doc-name">📄 ${job.filename}</span>
           <span class="doc-meta">${meta}</span>
         </div>
-        <div class="doc-actions">
+        <div class="doc-actions" style="display:flex;align-items:center;gap:12px;">
           ${statusBadge}
+          <button class="btn-danger" data-id="${job.id}">删除</button>
         </div>`;
+      item.querySelector('.btn-danger').addEventListener('click', () => deleteJob(job.id, job.filename));
       jobList.appendChild(item);
     });
   } catch {

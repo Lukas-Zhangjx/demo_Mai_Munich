@@ -1,6 +1,7 @@
 import os
 import json
 import asyncio
+import traceback
 import groq
 from dotenv import load_dotenv
 
@@ -154,8 +155,9 @@ def _process_upload(job_id: str, raw: bytes, filename: str):
         }).eq("id", job_id).execute()
 
     except Exception as e:
+        print(f"[UPLOAD ERROR] {filename}: {e}")
+        traceback.print_exc()
         db.table("upload_jobs").update({"status": "error", "updated_at": "now()"}).eq("id", job_id).execute()
-        raise
 
 
 @app.post("/api/upload", status_code=202)
@@ -201,6 +203,17 @@ def get_upload_jobs(_: str = Depends(verify_token)):
         .data
     )
     return {"jobs": rows}
+
+
+@app.delete("/api/upload-jobs/{job_id}")
+def delete_upload_job(job_id: str, _: str = Depends(verify_token)):
+    """Delete a job record and its associated document chunks."""
+    job = get_client().table("upload_jobs").select("filename").eq("id", job_id).execute().data
+    if job:
+        filename = job[0]["filename"]
+        get_client().table("documents").delete().eq("metadata->>filename", filename).execute()
+    get_client().table("upload_jobs").delete().eq("id", job_id).execute()
+    return {"status": "deleted", "job_id": job_id}
 
 
 # ── Chat (SSE streaming) ──────────────────────────────────────────────────────
